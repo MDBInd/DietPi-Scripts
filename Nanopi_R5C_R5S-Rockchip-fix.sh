@@ -38,6 +38,15 @@ else
     echo "! Rockchip kernel not detected - no changes made"
 fi
 
+# Check if eth0 device path contains "3c0400000"
+eth0_path=$(readlink -f /sys/class/net/eth0/device 2>/dev/null || echo "")
+if [[ "$eth0_path" == *"3c0400000"* ]]; then
+    echo "> eth0 path correct"
+else
+    echo "! eth0 path incorrect"
+fi
+echo ""
+
 echo "> Before udev rules applied:"
 print_iface_info eth0
 print_iface_info eth1
