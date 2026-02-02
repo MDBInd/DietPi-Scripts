@@ -39,11 +39,18 @@ else
 fi
 
 # Check if eth0 device path contains "3c0400000"
-eth0_path=$(readlink -f /sys/class/net/eth0/device 2>/dev/null || echo "")
-if [[ "$eth0_path" == *"3c0400000"* ]]; then
+ETH0_PATH=$(readlink -f /sys/class/net/eth0/device 2>/dev/null || echo "")
+
+if [[ "$ETH0_PATH" == *"3c0400000"* ]]; then
     echo "> eth0 path correct"
+    LAN_IF="${ETH0_PATH##*/}"
+    ETH1_PATH=$(readlink -f /sys/class/net/eth1/device 2>/dev/null)
+    WAN_IF="${ETH1_PATH##*/}"
 else
     echo "! eth0 path incorrect"
+    WAN_IF="${ETH0_PATH##*/}"
+    ETH1_PATH=$(readlink -f /sys/class/net/eth1/device 2>/dev/null)
+    LAN_IF="${ETH1_PATH##*/}"
 fi
 echo ""
 
@@ -52,11 +59,11 @@ print_iface_info eth0
 print_iface_info eth1
 echo ""
 
-sudo tee /etc/udev/rules.d/99-dietpi-nanopir5c.rules > /dev/null <<'EOT'
+sudo tee /etc/udev/rules.d/99-dietpi-nanopir5c.rules > /dev/null <<EOT
 # NanoPi R5C eth0 eth1 fix
-# https://dietpi.com/forum/t/nanopi-r5c-eth0-and-eth1-swapping/24845
-SUBSYSTEM=="net", KERNEL=="eth0", KERNELS=="0002:01:00.0", RUN:="/bin/true"
-SUBSYSTEM=="net", KERNEL=="eth1", KERNELS=="0001:01:00.0", NAME="to_eth0", RUN:="/bin/true"
+# https://github.com/MDBInd/DietPi-Scripts/blob/main/Nanopi_R5C_R5S-Rockchip-fix.sh
+SUBSYSTEM=="net", KERNEL=="eth0", KERNELS=="$WAN_IF", RUN:="/bin/true"
+SUBSYSTEM=="net", KERNEL=="eth1", KERNELS=="$LAN_IF", NAME="to_eth0", RUN:="/bin/true"
 SUBSYSTEM=="net", KERNEL=="to_eth0", RUN="/bin/ip l s dev eth0 name eth1", RUN+="/bin/ip l s dev to_eth0 name eth0", RUN+="/bin/udevadm trigger -c add /sys/class/net/eth0 /sys/class/net/eth1"
 EOT
 
